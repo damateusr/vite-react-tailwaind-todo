@@ -1,55 +1,102 @@
-import CrossIcon from "./components/icons/CrossIcon"
-import MoonIcon from "./components/icons/MoonIcon"
+import { DragDropContext} from "@hello-pangea/dnd"
+import { useEffect, useState } from "react"
+import Header from "./components/Header"
+import ToDo from "./components/ToDo"
+import ToDoComputed from "./components/ToDoComputed"
+import ToDoFilter from "./components/ToDoFilter"
+import ToDoList from "./components/ToDoList"
+
+
+const initialState = JSON.parse(localStorage.getItem('todos')) || [
+  {id:1, tittle: "Go to the Gym", completed: true},
+  {id:2, tittle: "10 Minutes to pray", completed: false},
+  {id:3, tittle: "Pick up groceries", completed: false},
+  {id:4, tittle: "Complete curse", completed: true},
+  {id:5, tittle: "Complete todo app", completed: false}
+];
 
 const App = ()=>{
+
+  const[toDos, setToDos] = useState(initialState)
+
+  useEffect(()=>{
+    localStorage.setItem('todos', JSON.stringify(toDos))
+  },[toDos])
+
+  const createToDo = (title) =>{
+    const newToDo = {
+      id: Date.now(),
+      tittle: title.trim(),
+      completed: false
+    }
+
+    setToDos([...toDos, newToDo]);
+  }
+
+  const removeToDo = (id) =>{
+    setToDos(toDos.filter( todo => todo.id !== id))
+  }
+
+  const updateToDo = (id) =>{
+    setToDos(toDos.map( todo => todo.id === id ? {...todo, completed: !todo.completed} : todo ))
+  }
+
+  const computedItems = toDos.filter((todo) => !todo.completed).length;
+
+  const clearCompleted = () =>{
+    setToDos(toDos.filter( todo => !todo.completed))
+  }
+
+  const[filter, setFilter] = useState("all");
+
+  const filterToDos = ()=>{
+    switch (filter){
+      case "all":
+        return toDos;
+      case "active":
+        return toDos.filter( todo => !todo.completed)
+      case "completed":
+        return toDos.filter( todo => todo.completed)
+      default :
+        return toDos
+    }
+  }
+
+  const changeFilter = (filter) => {setFilter(filter)}
+
+  const handleDragEnd = (result)=>{
+    if(!result.destination) return;
+    
+    const starIndex = result.source.index
+    const endIndex = result.destination.index
+
+    const copyArr = [...toDos]
+    const [reorderArray] = copyArr.splice(starIndex,1)
+    
+    copyArr.splice(endIndex, 0, reorderArray)
+    setToDos(copyArr)
+
+  } 
+
   return (
-    <div className="bg-[url('./assets/images/bg-mobile-light.jpg')] bg-contain bg-no-repeat bg-gray-300 min-h-screen">
-      <header className="container mx-auto px-4">
-        <div className="flex justify-between">
-          <h1 className="uppercase tracking-[0.3em] text-white text-4xl font-bold">Todo</h1>
-          <button><MoonIcon/></button>
-        </div>
-        <form className="flex rounded bg-white overflow-hidden py-4 gap-4 items-center px-4 mt-8">
-            <span className="h-5 w-5 rounded-full border-2 inline-block"></span>
-            <input className="w-full text-gray-400 outline-none"
-            type="text" placeholder="Create a new todo..." />
-        </form>
-      </header>
-      <main className="container mx-auto mt-8 px-4">
-        <div className="bg-white rounded-md [&>article]:p-4">
-          <article className="flex gap-4 py-4 border-b border-b-gray-400">
-            <button className="flex-none h-5 w-5 rounded-full border-2 inline-block"></button>
-            <p className="grow text-gray-600 gr">Complete with Javascript curse in bluweb</p>
-            <button className="flex-none"><CrossIcon/></button>
-          </article>
+    <div className="bg-[url('./assets/images/bg-mobile-light.jpg')] bg-contain bg-no-repeat 
+    bg-gray-300 min-h-screen dark:bg-gray-900 dark:bg-[url('./assets/images/bg-mobile-dark.jpg')]
+    md:bg-[url('./assets/images/bg-desktop-light.jpg')] md:dark:bg-[url('./assets/images/bg-desktop-dark.jpg')]">
+      <Header/>
+      
+      <main className="container mx-auto mt-8 px-4 md:max-w-xl">
+        
+        <ToDo createToDo={createToDo}/>
 
-          <article className="flex gap-4 py-4 border-b border-b-gray-400">
-            <button className="flex-none h-5 w-5 rounded-full border-2 inline-block"></button>
-            <p className="grow text-gray-600 gr">Complete with Javascript curse in bluweb</p>
-            <button className="flex-none"><CrossIcon/></button>
-          </article>
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <ToDoList todos={filterToDos()} removeToDo={removeToDo} updateToDo={updateToDo}/>
+        </DragDropContext>
 
-          <article className="flex gap-4 py-4 border-b border-b-gray-400">
-            <button className="flex-none h-5 w-5 rounded-full border-2 inline-block"></button>
-            <p className="grow text-gray-600 gr">Complete with Javascript curse in bluweb</p>
-            <button className="flex-none"><CrossIcon/></button>
-          </article>
-         
-          <section className="py-4 px-4 flex justify-between">
-            <span className="text-gray-400">5 items left</span>
-            <button className="text-gray-400">Clear completed</button>
-          </section>
-        </div>
+        <ToDoComputed computedItems={computedItems} clearCompleted={clearCompleted} />
 
+        <ToDoFilter changeFilter={changeFilter} filter={filter}/>
       </main>
 
-      <section className="container mx-auto px-4 mt-8">
-        <div className="flex gap-4 justify-center rounded-md p-4 bg-white">
-          <button className="hover:text-blue-600">All</button>
-          <button className="hover:text-blue-600">Active</button>
-          <button className="hover:text-blue-600">Completed</button>
-        </div>
-      </section>
     </div>
   )  
   
